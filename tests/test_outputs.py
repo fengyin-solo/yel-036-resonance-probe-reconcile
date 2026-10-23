@@ -241,6 +241,18 @@ def test_duplicate_slot_is_refused(tmp_path):
     payload["readings"][1]["slot"] = payload["readings"][0]["slot"]
     result, _, output = invoke(tmp_path, payload)
     assert result.returncode == 1 and result.stderr == "台架拒收: BAD_RIG\n" and not output.exists()
+    minimum = base_payload()
+    minimum["rig_id"] = "AB"
+    minimum_result, _, minimum_output = invoke(tmp_path, minimum, output_name="minimum.json")
+    assert minimum_result.returncode == 0 and read(minimum_output)["rig_id"] == "AB"
+    spaced = base_payload()
+    spaced["rig_id"] = "A B"
+    spaced_result, _, spaced_output = invoke(tmp_path, spaced, output_name="spaced.json")
+    assert spaced_result.returncode == 0 and read(spaced_output)["rig_id"] == "A B"
+    control = base_payload()
+    control["rig_id"] = "A\tB"
+    control_result, _, control_output = invoke(tmp_path, control, output_name="control.json")
+    assert control_result.returncode == 1 and control_result.stderr == "台架拒收: BAD_RIG\n" and not control_output.exists()
 
 
 def test_ledger_has_exact_shape_and_is_idempotent(tmp_path):
