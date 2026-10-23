@@ -1,0 +1,99 @@
+{
+  "gate_tests": [
+    "test_outputs.py::test_success_writes_aligned_output_quietly",
+    "test_outputs.py::test_global_assignment_is_minimum_residual"
+  ],
+  "schema_version": 1,
+  "tests": {
+    "test_outputs.py::test_assignment_rows_have_exact_fields": {
+      "priority": "core",
+      "rationale": "assignment rows have exact fields；这是任务的主交付路径，失败意味着核心业务结果不可用。",
+      "weight": 0.15
+    },
+    "test_outputs.py::test_boolean_numeric_is_refused": {
+      "priority": "boundary",
+      "rationale": "boolean numeric is refused；这验证公开边界和拒收口径，失败会产生越界输入或错误放行。",
+      "weight": 0.029
+    },
+    "test_outputs.py::test_ceiling_accepts_inside_case": {
+      "priority": "core",
+      "rationale": "ceiling accepts inside case；这是任务的主交付路径，失败意味着核心业务结果不可用。",
+      "weight": 0.15
+    },
+    "test_outputs.py::test_ceiling_quarantines_first_outside_value": {
+      "priority": "core",
+      "rationale": "ceiling quarantines first outside value；这是任务的主交付路径，失败意味着核心业务结果不可用。",
+      "weight": 0.15
+    },
+    "test_outputs.py::test_different_result_appends_one_ledger_line": {
+      "priority": "recovery",
+      "rationale": "different result appends one ledger line；这验证失败、重跑或恢复不变量，失败会造成旧数据和台账不一致。",
+      "weight": 0.038
+    },
+    "test_outputs.py::test_duplicate_slot_is_refused": {
+      "priority": "boundary",
+      "rationale": "duplicate slot is refused；这验证公开边界和拒收口径，失败会产生越界输入或错误放行。",
+      "weight": 0.029
+    },
+    "test_outputs.py::test_duplicate_top_level_key_is_refused": {
+      "priority": "boundary",
+      "rationale": "duplicate top level key is refused；这验证公开边界和拒收口径，失败会产生越界输入或错误放行。",
+      "weight": 0.029
+    },
+    "test_outputs.py::test_extra_top_level_key_is_refused": {
+      "priority": "boundary",
+      "rationale": "extra top level key is refused；这验证公开边界和拒收口径，失败会产生越界输入或错误放行。",
+      "weight": 0.029
+    },
+    "test_outputs.py::test_io_failure_preserves_existing_target": {
+      "priority": "recovery",
+      "rationale": "io failure preserves existing target；这验证失败、重跑或恢复不变量，失败会造成旧数据和台账不一致。",
+      "weight": 0.038
+    },
+    "test_outputs.py::test_ledger_has_exact_shape_and_is_idempotent": {
+      "priority": "recovery",
+      "rationale": "ledger has exact shape and is idempotent；这验证失败、重跑或恢复不变量，失败会造成旧数据和台账不一致。",
+      "weight": 0.038
+    },
+    "test_outputs.py::test_ledger_path_equal_to_output_is_refused": {
+      "priority": "recovery",
+      "rationale": "ledger path equal to output is refused；这验证失败、重跑或恢复不变量，失败会造成旧数据和台账不一致。",
+      "weight": 0.038
+    },
+    "test_outputs.py::test_missing_top_level_key_is_refused": {
+      "priority": "boundary",
+      "rationale": "missing top level key is refused；这验证公开边界和拒收口径，失败会产生越界输入或错误放行。",
+      "weight": 0.029
+    },
+    "test_outputs.py::test_output_has_exact_top_level_keys": {
+      "priority": "schema",
+      "rationale": "output has exact top level keys；这验证结构、类型或序列化外观，失败会使下游无法稳定消费结果。",
+      "weight": 0.023
+    },
+    "test_outputs.py::test_output_is_compact_utf8_with_single_lf": {
+      "priority": "schema",
+      "rationale": "output is compact utf8 with single lf；这验证结构、类型或序列化外观，失败会使下游无法稳定消费结果。",
+      "weight": 0.022
+    },
+    "test_outputs.py::test_profile_fingerprint_length_is_refused": {
+      "priority": "boundary",
+      "rationale": "profile fingerprint length is refused；这验证公开边界和拒收口径，失败会产生越界输入或错误放行。",
+      "weight": 0.029
+    },
+    "test_outputs.py::test_total_residual_matches_assignment": {
+      "priority": "core",
+      "rationale": "total residual matches assignment；这是任务的主交付路径，失败意味着核心业务结果不可用。",
+      "weight": 0.15
+    },
+    "test_outputs.py::test_wrong_argument_count_is_refused": {
+      "priority": "boundary",
+      "rationale": "wrong argument count is refused；这验证公开边界和拒收口径，失败会产生越界输入或错误放行。",
+      "weight": 0.029
+    }
+  },
+  "weight_policy": {
+    "basis": "business_priority",
+    "core_min_share": 0.5,
+    "version": 1
+  }
+}
