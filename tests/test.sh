@@ -48,7 +48,7 @@ env -i \
   PATH=/usr/local/bin:/usr/bin:/bin \
   PYTHONNOUSERSITE=1 \
   PYTHONDONTWRITEBYTECODE=1 \
-  PYTHONPATH="$SITE_PACKAGES" \
+  PYTHONPATH="$SITE_PACKAGES:/tests" \
   "$TRUSTED_PYTHON" -S -P -B -m pip install --no-cache-dir --no-index --find-links=/opt/wheels pytest==8.4.1 >/tmp/pytest-install.log 2>&1 || {
   cat /tmp/pytest-install.log
   write_status "INCOMPLETE: pytest dependency unavailable"
