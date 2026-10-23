@@ -41,6 +41,32 @@ write_status "INCOMPLETE: pytest has not completed"
 trap on_exit EXIT
 trap on_signal INT TERM HUP
 
+PYTHON_HASH=$(/usr/bin/sha256sum "$TRUSTED_PYTHON")
+PYTHON_HASH=${PYTHON_HASH%% *}
+TIMEOUT_HASH=$(/usr/bin/sha256sum "$TRUSTED_TIMEOUT")
+TIMEOUT_HASH=${TIMEOUT_HASH%% *}
+if [ "$PYTHON_HASH" != "cb4548d280f38c2b1df4cba45f12c90a034729e08fce5bf1a223c58add0e21e3" ] || \
+   [ "$TIMEOUT_HASH" != "3629fa180f625d4de2e3fd3b15b12c5d42315e5733ecae6d1550b306abd7d482" ]; then
+  write_status "INCOMPLETE: trusted interpreter or timeout integrity check failed"
+  write_reward 0.000
+  completed=1
+  exit 0
+fi
+
+if ! printf '%s  %s\n' \
+  '9121e2c1fdb355232495be3194c8dfe87ccc2d5dee45947b78e68f499790d7a7' '/opt/wheels/iniconfig-2.3.1-py3-none-any.whl' \
+  'd7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c' '/opt/wheels/packaging-26.3-py3-none-any.whl' \
+  'e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746' '/opt/wheels/pluggy-1.6.0-py3-none-any.whl' \
+  '86540386c03d588bb81d44bc3928634ff26449851e99741617ecb9037ee5ec0b' '/opt/wheels/pygments-2.19.2-py3-none-any.whl' \
+  '539c70ba6fcead8e78eebbf1115e8b589e7565830d7d006a8723f19ac8a0afb7' '/opt/wheels/pytest-8.4.1-py3-none-any.whl' \
+  | sha256sum -c - > /tmp/pytest-wheel-check.log 2>&1; then
+  cat /tmp/pytest-wheel-check.log
+  write_status "INCOMPLETE: pytest wheel integrity check failed"
+  write_reward 0.000
+  completed=1
+  exit 0
+fi
+
 SITE_PACKAGES=$("$TRUSTED_PYTHON" -S -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
 env -i \
   HOME=/tmp \
@@ -49,7 +75,7 @@ env -i \
   PYTHONNOUSERSITE=1 \
   PYTHONDONTWRITEBYTECODE=1 \
   PYTHONPATH="$SITE_PACKAGES:/tests" \
-  "$TRUSTED_PYTHON" -S -P -B -m pip install --no-cache-dir --no-index --find-links=/opt/wheels pytest==8.4.1 >/tmp/pytest-install.log 2>&1 || {
+  "$TRUSTED_PYTHON" -S -P -B -m pip install --force-reinstall --no-cache-dir --no-index --find-links=/opt/wheels pytest==8.4.1 >/tmp/pytest-install.log 2>&1 || {
   cat /tmp/pytest-install.log
   write_status "INCOMPLETE: pytest dependency unavailable"
   write_reward 0.000
