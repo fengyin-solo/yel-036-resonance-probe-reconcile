@@ -23,6 +23,8 @@
 ```text
 台架成功归档时 stdout 与 stderr 均为空，结果文件本身承担完成信号。
 十条采集记录须共同组成总指纹误差最低的非重复探头对应。
+现场指纹按固定顺序计算：temperature_factor = 1 + 0.0018 * (temperature_c - 22)，settle_factor = 1 + 0.002 * (settle_ms - 100)，现场三元特征依次为 drive_hz / temperature_factor、amplitude_mm * settle_factor、phase_deg / temperature_factor，并将每个分量四舍五入到 12 位小数。
+现场特征与档案 fingerprint 的同轴差值为 (a-b) / (abs(a)+abs(b)+1e-12)，该差值取平方后，对三个分量求和即为一行的 residual；total_residual 是全局对应中所有 residual 的普通浮点求和。
 probe_assignments 内的一行由 slot、probe_id、residual 三部分组成。
 报告最外层出现 rig_id、status、probe_assignments、total_residual、accepted、diagnostic。
 JSON 编码紧凑，UTF-8 文本以一个换行符收尾。

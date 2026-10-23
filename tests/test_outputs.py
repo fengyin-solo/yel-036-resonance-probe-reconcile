@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -94,6 +95,32 @@ OUTPUT_KEYS = ['rig_id', 'status', 'probe_assignments', 'total_residual', 'accep
 LEDGER_KEYS = ['rig_id', 'input_sha256', 'result_sha256', 'total_residual']
 
 
+def expose_candidate_path(path):
+    if Path("/tmp") not in path.parents:
+        return
+    for ancestor in path.parents:
+        if ancestor == Path("/tmp"):
+            break
+        ancestor.chmod(0o755)
+    path.chmod(0o777)
+
+
+def candidate_command(tmp_path, *arguments):
+    expose_candidate_path(tmp_path)
+    if os.geteuid() == 0 and Path("/usr/bin/setpriv").is_file():
+        return [
+            "/usr/bin/setpriv",
+            "--reuid=65534",
+            "--regid=65534",
+            "--clear-groups",
+            "--",
+            "/usr/local/bin/python3",
+            ENTRY,
+            *map(str, arguments),
+        ]
+    return [sys.executable, ENTRY, *map(str, arguments)]
+
+
 def base_payload():
     return {
         "rig_id": "RIG-STD-7",
@@ -109,10 +136,10 @@ def invoke(tmp_path, payload=None, ledger=None, raw=None, output_name="result.js
     if raw is None:
         raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n"
     source.write_bytes(raw.encode("utf-8"))
-    command = [sys.executable, ENTRY, str(source), str(target)]
+    command = [str(value) for value in (source, target)]
     if ledger is not None:
         command.append(str(ledger))
-    completed = subprocess.run(command, capture_output=True, text=True, timeout=30)
+    completed = subprocess.run(candidate_command(tmp_path, *command), capture_output=True, text=True, timeout=30)
     return completed, source, target
 
 
@@ -181,6 +208,13 @@ def test_ceiling_accepts_inside_case(tmp_path):
     document = read(output)
     assert result.returncode == 0 and document["accepted"] is True
     assert document["status"] == "probes_reconciled"
+    expected_residual = 3.0 * ((0.04 / 2.04) ** 2)
+    changed = next(
+        row
+        for row in document["probe_assignments"]
+        if row["probe_id"] == "RIG-A"
+    )
+    assert changed["residual"] == pytest.approx(expected_residual, abs=1e-15)
 
 
 def test_ceiling_quarantines_first_outside_value(tmp_path):
@@ -285,7 +319,7 @@ def test_ledger_path_equal_to_output_is_refused(tmp_path):
     source = tmp_path / "readings.json"
     target = tmp_path / "same.json"
     source.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
-    result = subprocess.run([sys.executable, ENTRY, str(source), str(target), str(target)], capture_output=True, text=True, timeout=30)
+    result = subprocess.run(candidate_command(tmp_path, source, target, target), capture_output=True, text=True, timeout=30)
     assert result.returncode == 1 and result.stderr == "留痕拒收: BAD_RIG_LEDGER\n" and not target.exists()
 
 
@@ -295,7 +329,7 @@ def test_io_failure_preserves_existing_target(tmp_path):
     target.mkdir()
     source = tmp_path / "readings.json"
     source.write_text(json.dumps(base_payload(), separators=(",", ":")), encoding="utf-8")
-    result = subprocess.run([sys.executable, ENTRY, str(source), str(target)], capture_output=True, text=True, timeout=30)
+    result = subprocess.run(candidate_command(tmp_path, source, target), capture_output=True, text=True, timeout=30)
     assert result.returncode == 1 and result.stderr == "归档失败: RIG_IO\n"
     assert target.exists() and target.is_dir() and not any(target.iterdir()) and "traceback" not in result.stderr.lower()
 
@@ -303,5 +337,5 @@ def test_io_failure_preserves_existing_target(tmp_path):
 def test_wrong_argument_count_is_refused(tmp_path):
     """题面：「参数数量不符合输入、结果或可选留痕三种调用形状时，返回 1 并输出 台架拒收: BAD_RIG。」"""
     target = tmp_path / "result.json"
-    result = subprocess.run([sys.executable, ENTRY], capture_output=True, text=True, timeout=30)
+    result = subprocess.run(candidate_command(tmp_path), capture_output=True, text=True, timeout=30)
     assert result.returncode == 1 and result.stderr == "台架拒收: BAD_RIG\n" and not target.exists()

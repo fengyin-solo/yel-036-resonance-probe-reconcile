@@ -5,6 +5,8 @@ LOG_DIR=/logs/verifier
 REWARD_FILE="/logs/verifier/reward.txt"
 STATUS_FILE="$LOG_DIR/verification-status.txt"
 TEST_LOG="$LOG_DIR/test-stdout.txt"
+TRUSTED_PYTHON=/usr/local/bin/python3
+TRUSTED_TIMEOUT=/usr/bin/timeout
 completed=0
 mkdir -p "$LOG_DIR"
 
@@ -39,7 +41,15 @@ write_status "INCOMPLETE: pytest has not completed"
 trap on_exit EXIT
 trap on_signal INT TERM HUP
 
-python3 -m pip install --no-cache-dir --no-index --find-links=/opt/wheels pytest==8.4.1 >/tmp/pytest-install.log 2>&1 || {
+SITE_PACKAGES=$("$TRUSTED_PYTHON" -S -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
+env -i \
+  HOME=/tmp \
+  LANG=C.UTF-8 \
+  PATH=/usr/local/bin:/usr/bin:/bin \
+  PYTHONNOUSERSITE=1 \
+  PYTHONDONTWRITEBYTECODE=1 \
+  PYTHONPATH="$SITE_PACKAGES" \
+  "$TRUSTED_PYTHON" -S -P -B -m pip install --no-cache-dir --no-index --find-links=/opt/wheels pytest==8.4.1 >/tmp/pytest-install.log 2>&1 || {
   cat /tmp/pytest-install.log
   write_status "INCOMPLETE: pytest dependency unavailable"
   write_reward 0.000
@@ -50,7 +60,17 @@ python3 -m pip install --no-cache-dir --no-index --find-links=/opt/wheels pytest
 REPORT=$(mktemp "$LOG_DIR/pytest-results.XXXXXX")
 rm -f "$REPORT"
 set +e
-timeout --signal=TERM --kill-after=10s 300s python3 -u -m pytest -v -p no:cacheprovider --junitxml="$REPORT" /tests/test_outputs.py > "$TEST_LOG" 2>&1
+env -i \
+  HOME=/tmp \
+  LANG=C.UTF-8 \
+  PATH=/usr/local/bin:/usr/bin:/bin \
+  PYTHONNOUSERSITE=1 \
+  PYTHONDONTWRITEBYTECODE=1 \
+  PYTHONPATH="$SITE_PACKAGES:/tests" \
+  PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+  "$TRUSTED_TIMEOUT" --signal=TERM --kill-after=10s 300s \
+  "$TRUSTED_PYTHON" -S -s -P -B -m pytest -v -p no:cacheprovider \
+  --junitxml="$REPORT" /tests/test_outputs.py > "$TEST_LOG" 2>&1
 RC=$?
 set -e
 cat "$TEST_LOG" 2>/dev/null || true
@@ -62,7 +82,16 @@ elif [ ! -s "$REPORT" ]; then
   write_status "INCOMPLETE: pytest completion report missing"
   write_reward 0.000
 else
-  if python3 /tests/score.py --config /tests/scoring.json --junit "$REPORT" --report-out "$LOG_DIR/scoring-report.json" --reward-out "$REWARD_FILE"; then
+  if env -i \
+    HOME=/tmp \
+    LANG=C.UTF-8 \
+    PATH=/usr/local/bin:/usr/bin:/bin \
+    PYTHONNOUSERSITE=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH="$SITE_PACKAGES:/tests" \
+    "$TRUSTED_PYTHON" -S -P -B /tests/score.py \
+    --config /tests/scoring.json --junit "$REPORT" \
+    --report-out "$LOG_DIR/scoring-report.json" --reward-out "$REWARD_FILE"; then
     REWARD=$(cat "$REWARD_FILE")
     case "$REWARD" in
       0.[0-9][0-9][0-9]|1.000) ;;
